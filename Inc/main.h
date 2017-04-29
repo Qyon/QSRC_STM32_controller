@@ -93,6 +93,16 @@
 #define EN_1_B_GPIO_Port GPIOA
 #define EN_1_BTN_Pin GPIO_PIN_10
 #define EN_1_BTN_GPIO_Port GPIOA
+#define IR_SENS_Pin GPIO_PIN_13
+#define IR_SENS_GPIO_Port GPIOA
+#define LED_D_Pin GPIO_PIN_14
+#define LED_D_GPIO_Port GPIOA
+#define LED_C_Pin GPIO_PIN_15
+#define LED_C_GPIO_Port GPIOA
+#define LED_B_Pin GPIO_PIN_3
+#define LED_B_GPIO_Port GPIOB
+#define LED_A_Pin GPIO_PIN_4
+#define LED_A_GPIO_Port GPIOB
 #define LED_UP_Pin GPIO_PIN_5
 #define LED_UP_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
