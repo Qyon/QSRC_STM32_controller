@@ -41,6 +41,7 @@
   ******************************************************************************
   */
 /* Includes ------------------------------------------------------------------*/
+#include <hd44780.h>
 #include "main.h"
 #include "stm32f1xx_hal.h"
 #include "i2c.h"
@@ -48,6 +49,7 @@
 #include "usart.h"
 #include "usb_device.h"
 #include "gpio.h"
+#include "startup.h"
 
 /* USER CODE BEGIN Includes */
 
@@ -70,7 +72,6 @@ void Error_Handler(void);
 /* USER CODE END PFP */
 
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 int main(void)
@@ -96,9 +97,10 @@ int main(void)
   MX_TIM2_Init();
   MX_TIM3_Init();
   MX_USART1_UART_Init();
+  MX_TIM4_Init();
 
   /* USER CODE BEGIN 2 */
-
+    startup();
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -108,7 +110,6 @@ int main(void)
   /* USER CODE END WHILE */
 
   /* USER CODE BEGIN 3 */
-
   }
   /* USER CODE END 3 */
 

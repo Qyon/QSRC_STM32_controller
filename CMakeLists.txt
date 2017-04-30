@@ -50,6 +50,12 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
         COMMENT "Building ${HEX_FILE} \nBuilding ${BIN_FILE}")
+
+add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
+        COMMAND rm -f E:/FIRMWARE.bin
+        COMMAND cp ${BIN_FILE} E:/
+        COMMENT "Burning ${BIN_FILE}")
+
 set(CMAKE_CXX_STANDARD 11)
 
 add_custom_target(program
