@@ -37,6 +37,7 @@ public:
     void init();
     void refresh();
     void print(uint8_t row, uint8_t col, char *data);
+    void print(uint8_t row, uint8_t col, uint32_t value, uint8_t base = 10);
     void print(uint8_t row, uint8_t col, float value, uint8_t digits);
     void setRC(uint8_t row, uint8_t col) const;
 };

@@ -31,12 +31,14 @@ PCF8574_RESULT PCF8574_DeInit(PCF8574_HandleTypeDef* handle) {
 }
 
 PCF8574_RESULT PCF8574_Write(PCF8574_HandleTypeDef* handle, uint8_t val) {
+
 	if (HAL_I2C_Master_Transmit(&handle->i2c,
 			(handle->PCF_I2C_ADDRESS << 1) | PCF8574_I2C_ADDRESS_MASK, &val, 1,
 			handle->PCF_I2C_TIMEOUT) != HAL_OK) {
 		handle->errorCallback(PCF8574_ERROR);
 		return PCF8574_ERROR;
 	}
+
 	return PCF8574_OK;
 }
 

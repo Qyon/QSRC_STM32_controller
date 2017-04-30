@@ -4,8 +4,11 @@
 
 
 #include "Display.h"
+void lcd_error(LCD_RESULT x){
 
+}
 void Display::init() {
+    lcd->errorCallback = lcd_error;
     lcd->pcf8574.PCF_I2C_ADDRESS = 7;
     lcd->pcf8574.PCF_I2C_TIMEOUT = 1000;
     lcd->pcf8574.i2c.Instance = I2C1;
@@ -13,9 +16,10 @@ void Display::init() {
     lcd->NUMBER_OF_LINES = NUMBER_OF_LINES_2;
     lcd->type = TYPE0;
 
-    if(LCD_Init(lcd)!=LCD_OK){
-    }
+    LCD_Init(lcd);
+
     LCD_ClearDisplay(lcd);
+
 
     print(0, 0, (char *)  "QSRC ");
     print(1, 0, (char *) __DATE__);
@@ -51,6 +55,11 @@ void Display::setRC(uint8_t row, uint8_t col) const {
 void Display::print(uint8_t row, uint8_t col, float value, uint8_t digits) {
     setRC(row, col);
     LCD_WriteFloat(lcd, value, digits);
+}
+
+void Display::print(uint8_t row, uint8_t col, uint32_t value, uint8_t base) {
+    setRC(row, col);
+    LCD_WriteNumber(lcd, value, base);
 }
 
 void Display::refresh() {
@@ -95,3 +104,4 @@ void Display::setElTarget(float el_desired) {
     Display::el_desired = el_desired;
     el_desired_refresh = 1;
 }
+

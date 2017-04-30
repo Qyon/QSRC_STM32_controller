@@ -45,12 +45,14 @@ LCD_RESULT LCD_Init(LCD_PCF8574_HandleTypeDef* handle) {
 	handle->D = 1;
 	handle->B = 0;
 	handle->C = 0;
+
 	if (handle->type == TYPE0) {
 		handle->pins = PCF8574_Type0Pins;
 	} else {
 		handle->errorCallback(LCD_ERROR);
 		return LCD_ERROR;	// no type of subinterface was specified
 	}
+
 	if (PCF8574_Init(&handle->pcf8574) != PCF8574_OK) {
 		handle->errorCallback(LCD_ERROR);
 		return LCD_ERROR;
@@ -60,7 +62,6 @@ LCD_RESULT LCD_Init(LCD_PCF8574_HandleTypeDef* handle) {
 	LCD_StateWriteBit(handle, 0, LCD_PIN_RS);
 	LCD_StateWriteBit(handle, 0, LCD_PIN_RW);
 	LCD_StateWriteBit(handle, 0, LCD_PIN_E);
-
 	LCD_WriteToDataBus(handle, 3);
 
 	LCD_StateWriteBit(handle, 1, LCD_PIN_E);
