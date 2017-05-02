@@ -55,39 +55,56 @@ void Controller::init() {
 }
 
 void Controller::loop() {
-    static CommandPacket response;
     RTC_TimeTypeDef time;
     if (uart_has_data){
 
     } else {
         HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
         if (time.Seconds != last_time.Seconds){
-            //display->print(0, 10, (char *) "NO DATA");
             last_time = time;
             display->print(1, 10, (uint32_t)time.Seconds, 2);
-            response.command = cmdPing;
-            response.header = packetHeader;
-            response.crc = getPacketCRC(&response);
+            this->ddd();
+        }
+    }
 
-            HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
-            //HAL_UART_Transmit_IT(this->comm_uart, (uint8_t *) &response, sizeof(response));
-            HAL_UART_Transmit(this->comm_uart, (uint8_t *) &response, sizeof(response), 1001);
-            HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
-            memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
-            HAL_StatusTypeDef s = (HAL_UART_Receive(comm_uart, (uint8_t *) (&(cmd_buffer)), sizeof(cmd_buffer)+1, 1000));
-            onUARTData();
-            if (!validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
-                display->print(0, 10, (uint32_t)cmd_to_process.crc, 16);
+    display->refresh();
+}
+
+void Controller::ddd() {
+    static CommandPacket response;
+    response.command = cmdPing;
+    response.header = packetHeader;
+    response.crc = this->getPacketCRC(&response);
+    HAL_StatusTypeDef s;
+    HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
+    HAL_Delay(1);
+    s = HAL_UART_Transmit(this->comm_uart, (uint8_t *) &response, sizeof(response), 1001);
+    HAL_Delay(10);
+    HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
+
+    if (s == HAL_OK){
+        __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_RXNE);
+        __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_ORE);
+        memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
+        s = HAL_UART_Receive(this->comm_uart, (uint8_t *) &this->cmd_buffer, sizeof(this->cmd_buffer), 500);
+        if (s == HAL_OK){
+            this->onUARTData();
+            if (!this->validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
+                this->display->print(0, 10, (uint32_t) this->cmd_to_process.crc, 16);
                 memset((void *)&this->cmd_to_process, 0, sizeof(this->cmd_to_process));
             } else {
-                display->print(0, 10, (char *) "OK  CMD!");
-                handleCommand((CommandPacket *) &this->cmd_to_process, nullptr);
+                this->display->print(0, 10, (char *) "OK  CMD!");
+                this->handleCommand((CommandPacket *) &this->cmd_to_process, nullptr);
                 this->cmd_to_process.header = 0;
             }
+        } else {
+            this->onRxError();
         }
 
+    } else {
+        this->onTxError();
     }
-    display->refresh();
+
 }
 
 bool Controller::validateCommandPacket(CommandPacket *pPacket) {
@@ -155,7 +172,7 @@ void Controller::onUSARTRxComplete(UART_HandleTypeDef *huart) {
 }
 
 void Controller::onUARTData() {
-    memcpy((void *)&(cmd_to_process), (void *)&(cmd_buffer), sizeof(cmd_buffer));
+    memcpy((void *)&(cmd_to_process), (const void *) &cmd_buffer[1], sizeof(cmd_to_process));
     cmd_ready = true;
 }
 
@@ -174,5 +191,15 @@ void Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse)
         pResponse->crc = getPacketCRC(pResponse);
     }
 
+}
+
+void Controller::onTxError() {
+    comm_tx_err++;
+    display->setComm_tx_err(comm_tx_err);
+}
+
+void Controller::onRxError() {
+    comm_rx_err++;
+    display->setComm_rx_err(comm_rx_err);
 }
 

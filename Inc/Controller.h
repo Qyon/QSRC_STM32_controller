@@ -20,9 +20,11 @@ private:
     float az_desired = 0.0f;
     float el_current = 0.0f;
     float el_desired = 0.0f;
+    uint16_t comm_tx_err = 0;
+    uint16_t comm_rx_err = 0;
     RTC_TimeTypeDef last_time;
 
-    volatile CommandPacket cmd_buffer;
+    volatile uint8_t cmd_buffer[sizeof(CommandPacket) + 2];
     volatile CommandPacket cmd_to_process;
     volatile bool cmd_ready = 0;
     volatile uint8_t uart_has_data = 0;
@@ -67,6 +69,12 @@ public:
     void handleCommand(CommandPacket *pPacket, CommandPacket *pResponse);
 
     void onUARTData();
+
+    void ddd();
+
+    void onTxError();
+
+    void onRxError();
 };
 
 

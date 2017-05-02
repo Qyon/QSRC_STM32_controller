@@ -31,6 +31,16 @@ private:
     uint8_t el_current_refresh = 1;
     float el_desired = 0.0f;
     uint8_t el_desired_refresh = 1;
+    uint16_t comm_tx_err = 0;
+public:
+    void setComm_tx_err(uint16_t comm_tx_err);
+
+    void setComm_rx_err(uint16_t comm_rx_err);
+
+private:
+    uint16_t comm_rx_err = 0;
+    uint8_t comm_tx_err_refresh = 1;
+    uint8_t comm_rx_err_refresh = 1;
 public:
     Display(LCD_PCF8574_HandleTypeDef *lcd);
 
@@ -40,6 +50,8 @@ public:
     void print(uint8_t row, uint8_t col, uint32_t value, uint8_t base = 10);
     void print(uint8_t row, uint8_t col, float value, uint8_t digits);
     void setRC(uint8_t row, uint8_t col) const;
+
+    void clear();
 };
 
 

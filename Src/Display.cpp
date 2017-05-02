@@ -83,6 +83,16 @@ void Display::refresh() {
         print(3, 0, (char *) "          ");
         print(3, (uint8_t) (3 + (el_desired < 10 ? 2 : (el_desired < 100 ? 1 : 0))), el_desired, 2);
     }
+    if (comm_tx_err_refresh){
+        comm_tx_err_refresh = 0;
+        print(2, 10, (char *) "          ");
+        print(2, 10, comm_tx_err);
+    }
+    if (comm_rx_err_refresh){
+        comm_rx_err_refresh = 0;
+        print(3, 10, (char *) "          ");
+        print(3, 10, comm_rx_err);
+    }
 }
 
 void Display::setAz(float az_current) {
@@ -103,5 +113,19 @@ void Display::setEl(float el_current) {
 void Display::setElTarget(float el_desired) {
     Display::el_desired = el_desired;
     el_desired_refresh = 1;
+}
+
+void Display::clear() {
+    LCD_ClearDisplay(lcd);
+}
+
+void Display::setComm_tx_err(uint16_t comm_tx_err) {
+    Display::comm_tx_err = comm_tx_err;
+    comm_tx_err_refresh = 1;
+}
+
+void Display::setComm_rx_err(uint16_t comm_rx_err) {
+    Display::comm_rx_err = comm_rx_err;
+    comm_rx_err_refresh = 1;
 }
 
