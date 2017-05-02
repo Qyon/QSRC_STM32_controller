@@ -16,8 +16,6 @@ void startup() {
 #pragma GCC diagnostic ignored "-Wmissing-noreturn"
 
     controller.init();
-
-
     while (1){
         controller.loop();
     }
@@ -34,6 +32,9 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
     controller.onUSARTTxComplete(huart);
 }
 
+void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
+    controller.onUSARTRxComplete(huart);
+}
 
 void USB_CDC_ReceiveHandler(uint8_t *buffer, uint32_t len){
 //  CDC_Transmit_FS(Buf, *Len);

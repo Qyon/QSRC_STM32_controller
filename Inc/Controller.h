@@ -22,8 +22,10 @@ private:
     float el_desired = 0.0f;
     RTC_TimeTypeDef last_time;
 
-    CommandPacket cmd_buffer;
-    CommandPacket cmd_to_process;
+    volatile CommandPacket cmd_buffer;
+    volatile CommandPacket cmd_to_process;
+    volatile bool cmd_ready = 0;
+    volatile uint8_t uart_has_data = 0;
 
     uint32_t serial_sync;
     uint8_t serial_sync_tmp;
@@ -63,6 +65,8 @@ public:
     uint16_t getPacketCRC(const CommandPacket *pPacket) const;
 
     void handleCommand(CommandPacket *pPacket, CommandPacket *pResponse);
+
+    void onUARTData();
 };
 
 

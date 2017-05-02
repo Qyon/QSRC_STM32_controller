@@ -57,30 +57,33 @@ void Controller::init() {
 void Controller::loop() {
     static CommandPacket response;
     RTC_TimeTypeDef time;
-    if (this->cmd_to_process.header){
-        if (!validateCommandPacket(&this->cmd_to_process)){
-            memset(&this->cmd_to_process, 0, sizeof(this->cmd_to_process));
-            serial_sync_tmp = 0;
-            serial_sync = 0;
-            display->print(0, 10, (char *) "BAD CMD!");
-        } else {
-            handleCommand(&this->cmd_to_process, nullptr);
-            this->cmd_to_process.header = 0;
-            display->print(0, 10, (char *) "OK  CMD!");
-        }
+    if (uart_has_data){
+
     } else {
         HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
         if (time.Seconds != last_time.Seconds){
+            //display->print(0, 10, (char *) "NO DATA");
             last_time = time;
             display->print(1, 10, (uint32_t)time.Seconds, 2);
             response.command = cmdPing;
             response.header = packetHeader;
             response.crc = getPacketCRC(&response);
 
-            HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
+            HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
             //HAL_UART_Transmit_IT(this->comm_uart, (uint8_t *) &response, sizeof(response));
             HAL_UART_Transmit(this->comm_uart, (uint8_t *) &response, sizeof(response), 1001);
-            HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
+            HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
+            memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
+            HAL_StatusTypeDef s = (HAL_UART_Receive(comm_uart, (uint8_t *) (&(cmd_buffer)), sizeof(cmd_buffer)+1, 1000));
+            onUARTData();
+            if (!validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
+                display->print(0, 10, (uint32_t)cmd_to_process.crc, 16);
+                memset((void *)&this->cmd_to_process, 0, sizeof(this->cmd_to_process));
+            } else {
+                display->print(0, 10, (char *) "OK  CMD!");
+                handleCommand((CommandPacket *) &this->cmd_to_process, nullptr);
+                this->cmd_to_process.header = 0;
+            }
         }
 
     }
@@ -143,26 +146,17 @@ void Controller::onUSARTTxComplete(UART_HandleTypeDef *huart) {
     //HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
 }
 
+
 void Controller::onUSARTRxComplete(UART_HandleTypeDef *huart) {
     if (huart->Instance != this->comm_uart->Instance){
         return;
     }
-    if (serial_sync != packetHeader){
-        serial_sync >>= 8;
-        serial_sync |= ((serial_sync_tmp << 24) & 0xff000000);
-        if (serial_sync == packetHeader){
-            this->cmd_buffer.header = serial_sync;
-            HAL_UART_Receive_IT(this->comm_uart, (uint8_t *) (&(this->cmd_buffer) + sizeof(this->cmd_buffer.header)), sizeof(this->cmd_buffer) - sizeof(this->cmd_buffer.header));
-        } else {
-            HAL_UART_Receive_IT(this->comm_uart, (uint8_t *) &(this->serial_sync_tmp), sizeof(serial_sync_tmp));
-        }
-    } else {
-        if (!this->cmd_to_process.header){
-            // copy only when previous command processed
-            memcpy(&(this->cmd_to_process), &(this->cmd_buffer), sizeof(this->cmd_buffer));
-        }
-        HAL_UART_Receive_IT(this->comm_uart, (uint8_t *) (&(this->cmd_buffer)), sizeof(this->cmd_buffer));
-    }
+    uart_has_data = 1;
+}
+
+void Controller::onUARTData() {
+    memcpy((void *)&(cmd_to_process), (void *)&(cmd_buffer), sizeof(cmd_buffer));
+    cmd_ready = true;
 }
 
 void Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse) {
