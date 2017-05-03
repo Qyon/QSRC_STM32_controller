@@ -5,6 +5,8 @@
 #ifndef QSRC_STM32_CONTROLLER_CONTROLLER_H
 #define QSRC_STM32_CONTROLLER_CONTROLLER_H
 
+static const int MAX_COMMANDS_IN_QUEUE = 4;
+
 #include "Display.h"
 #include "Rot2Prog.h"
 #include "protocol.h"
@@ -27,7 +29,7 @@ private:
     volatile uint8_t cmd_buffer[sizeof(CommandPacket) + 2];
     volatile CommandPacket cmd_to_process;
 
-    CommandPacket commands_queue[4];
+    CommandPacket commands_queue[MAX_COMMANDS_IN_QUEUE];
     uint8_t commands_queue_counter = 0;
 
     void setAz_current(float az_current);

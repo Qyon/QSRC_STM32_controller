@@ -62,9 +62,9 @@ void Controller::loop() {
         display->print(1, 10, (uint32_t)time.Seconds, 2);
         CommandPacket commandPacket;
         commandPacket.command = cmdReadAzEl;
-        this->queueCommand(&commandPacket);
         this->display->print(0, 10, (char *) "      ");
         this->display->print(0, 10, commands_queue_counter);
+        this->queueCommand(&commandPacket);
     }
     if (commands_queue_counter){
         if (this->sendCommand(&commands_queue[commands_queue_counter-1])){
@@ -210,11 +210,14 @@ void Controller::onRxError() {
 }
 
 void Controller::queueCommand(const CommandPacket *const pPacket) {
-    memcpy(&commands_queue[commands_queue_counter], pPacket, sizeof(CommandPacket));
-    commands_queue[commands_queue_counter].header = packetHeader;
-    commands_queue[commands_queue_counter].crc = getPacketCRC(&commands_queue[commands_queue_counter]);
+    if (commands_queue_counter >= MAX_COMMANDS_IN_QUEUE){
+        // TODO: error handling
+    } else {
+        memcpy(&commands_queue[commands_queue_counter], pPacket, sizeof(CommandPacket));
+        commands_queue[commands_queue_counter].header = packetHeader;
+        commands_queue[commands_queue_counter].crc = getPacketCRC(&commands_queue[commands_queue_counter]);
 
-    commands_queue_counter++;
-    //TODO error checking!
+        commands_queue_counter++;
+    }
 }
 
