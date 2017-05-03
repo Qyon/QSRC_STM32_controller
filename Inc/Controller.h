@@ -26,20 +26,13 @@ private:
 
     volatile uint8_t cmd_buffer[sizeof(CommandPacket) + 2];
     volatile CommandPacket cmd_to_process;
-    volatile bool cmd_ready = 0;
-    volatile uint8_t uart_has_data = 0;
 
-    uint32_t serial_sync;
-    uint8_t serial_sync_tmp;
-
-
+    CommandPacket commands_queue[4];
+    uint8_t commands_queue_counter = 0;
 
     void setAz_current(float az_current);
-
     void setAz_desired(float az_desired);
-
     void setEl_current(float el_current);
-
     void setEl_desired(float el_desired);
 public:
     Controller(Display *display, UART_HandleTypeDef *comm_uart);
@@ -70,11 +63,13 @@ public:
 
     void onUARTData();
 
-    void ddd();
+    bool sendCommand(CommandPacket *pPacket);
 
     void onTxError();
 
     void onRxError();
+
+    void queueCommand(const CommandPacket *const pPacket);
 };
 
 

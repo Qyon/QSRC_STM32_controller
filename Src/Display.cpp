@@ -96,23 +96,31 @@ void Display::refresh() {
 }
 
 void Display::setAz(float az_current) {
-    Display::az_current = az_current;
-    az_current_refresh = 1;
+    if (Display::az_current != az_current){
+        Display::az_current = az_current;
+        az_current_refresh = 1;
+    }
 }
 
 void Display::setAzTarget(float az_desired) {
-    Display::az_desired = az_desired;
-    az_desired_refresh = 1;
+    if (Display::az_desired != az_desired) {
+        Display::az_desired = az_desired;
+        az_desired_refresh = 1;
+    }
 }
 
 void Display::setEl(float el_current) {
-    Display::el_current = el_current;
-    el_current_refresh = 1;
+    if (Display::el_current != el_current) {
+        Display::el_current = el_current;
+        el_current_refresh = 1;
+    }
 }
 
 void Display::setElTarget(float el_desired) {
-    Display::el_desired = el_desired;
-    el_desired_refresh = 1;
+    if (Display::el_desired != el_desired) {
+        Display::el_desired = el_desired;
+        el_desired_refresh = 1;
+    }
 }
 
 void Display::clear() {
@@ -125,7 +133,9 @@ void Display::setComm_tx_err(uint16_t comm_tx_err) {
 }
 
 void Display::setComm_rx_err(uint16_t comm_rx_err) {
-    Display::comm_rx_err = comm_rx_err;
-    comm_rx_err_refresh = 1;
+    if (Display::comm_rx_err != comm_rx_err) {
+        Display::comm_rx_err = comm_rx_err;
+        comm_rx_err_refresh = 1;
+    }
 }
 

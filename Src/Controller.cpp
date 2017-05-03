@@ -56,29 +56,29 @@ void Controller::init() {
 
 void Controller::loop() {
     RTC_TimeTypeDef time;
-    if (uart_has_data){
-
-    } else {
-        HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
-        if (time.Seconds != last_time.Seconds){
-            last_time = time;
-            display->print(1, 10, (uint32_t)time.Seconds, 2);
-            this->ddd();
+    HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
+    if (time.Seconds != last_time.Seconds){
+        last_time = time;
+        display->print(1, 10, (uint32_t)time.Seconds, 2);
+        CommandPacket commandPacket;
+        commandPacket.command = cmdReadAzEl;
+        this->queueCommand(&commandPacket);
+        this->display->print(0, 10, (char *) "      ");
+        this->display->print(0, 10, commands_queue_counter);
+    }
+    if (commands_queue_counter){
+        if (this->sendCommand(&commands_queue[commands_queue_counter-1])){
+            commands_queue_counter--;
         }
     }
-
     display->refresh();
 }
 
-void Controller::ddd() {
-    static CommandPacket response;
-    response.command = cmdPing;
-    response.header = packetHeader;
-    response.crc = this->getPacketCRC(&response);
+bool Controller::sendCommand(CommandPacket *pPacket) {
     HAL_StatusTypeDef s;
     HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
     HAL_Delay(1);
-    s = HAL_UART_Transmit(this->comm_uart, (uint8_t *) &response, sizeof(response), 1001);
+    s = HAL_UART_Transmit(this->comm_uart, (uint8_t *)pPacket, sizeof(CommandPacket), 1001);
     HAL_Delay(10);
     HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
 
@@ -86,17 +86,16 @@ void Controller::ddd() {
         __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_RXNE);
         __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_ORE);
         memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
-        s = HAL_UART_Receive(this->comm_uart, (uint8_t *) &this->cmd_buffer, sizeof(this->cmd_buffer), 500);
+        s = HAL_UART_Receive(this->comm_uart, (uint8_t *) &this->cmd_buffer, sizeof(this->cmd_buffer), 200);
         if (s == HAL_OK){
             this->onUARTData();
             if (!this->validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
-                this->display->print(0, 10, (uint32_t) this->cmd_to_process.crc, 16);
                 memset((void *)&this->cmd_to_process, 0, sizeof(this->cmd_to_process));
             } else {
-                this->display->print(0, 10, (char *) "OK  CMD!");
                 this->handleCommand((CommandPacket *) &this->cmd_to_process, nullptr);
                 this->cmd_to_process.header = 0;
             }
+            return true;
         } else {
             this->onRxError();
         }
@@ -104,7 +103,7 @@ void Controller::ddd() {
     } else {
         this->onTxError();
     }
-
+    return false;
 }
 
 bool Controller::validateCommandPacket(CommandPacket *pPacket) {
@@ -119,8 +118,13 @@ uint16_t Controller::getPacketCRC(const CommandPacket *pPacket) const { return c
 
 
 void Controller::process_set_command(Rot2ProgCmd *pCmd) {
-    setAz_desired(readRot2ProgAngle(pCmd->azimuth, pCmd->azimuth_resolution));
-    setEl_desired(readRot2ProgAngle(pCmd->elevation, pCmd->elevation_resolution));
+    CommandPacket commandPacket;
+    commandPacket.command = cmdGoToAzEl;
+    commandPacket.payload.goToAzEl.az = readRot2ProgAngle(pCmd->azimuth, pCmd->azimuth_resolution);
+    commandPacket.payload.goToAzEl.el = readRot2ProgAngle(pCmd->elevation, pCmd->elevation_resolution);
+    setAz_desired(commandPacket.payload.goToAzEl.az);
+    setEl_desired(commandPacket.payload.goToAzEl.el);
+    queueCommand(&commandPacket);
 }
 
 void Controller::setAz_current(float az_current) {
@@ -168,12 +172,10 @@ void Controller::onUSARTRxComplete(UART_HandleTypeDef *huart) {
     if (huart->Instance != this->comm_uart->Instance){
         return;
     }
-    uart_has_data = 1;
 }
 
 void Controller::onUARTData() {
     memcpy((void *)&(cmd_to_process), (const void *) &cmd_buffer[1], sizeof(cmd_to_process));
-    cmd_ready = true;
 }
 
 void Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse) {
@@ -183,9 +185,13 @@ void Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse)
         pResponse->command = cmdOkResponse;
     }
 
-
     switch (pPacket->command){
-        default:break;
+        case cmdReadAzElResponse:
+            setAz_current(pPacket->payload.readAzElResponse.az);
+            setEl_current(pPacket->payload.readAzElResponse.el);
+            break;
+        default:
+            break;
     }
     if (nullptr != pResponse){
         pResponse->crc = getPacketCRC(pResponse);
@@ -201,5 +207,14 @@ void Controller::onTxError() {
 void Controller::onRxError() {
     comm_rx_err++;
     display->setComm_rx_err(comm_rx_err);
+}
+
+void Controller::queueCommand(const CommandPacket *const pPacket) {
+    memcpy(&commands_queue[commands_queue_counter], pPacket, sizeof(CommandPacket));
+    commands_queue[commands_queue_counter].header = packetHeader;
+    commands_queue[commands_queue_counter].crc = getPacketCRC(&commands_queue[commands_queue_counter]);
+
+    commands_queue_counter++;
+    //TODO error checking!
 }
 
