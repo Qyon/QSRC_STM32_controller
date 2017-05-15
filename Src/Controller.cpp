@@ -6,9 +6,12 @@
 #include <protocol.h>
 #include <rtc.h>
 #include <stm32f1xx_hal_rtc.h>
+#include <Encoder.h>
 #include "Controller.h"
 
-Controller::Controller(Display *display, UART_HandleTypeDef *comm_uart) : display(display), comm_uart(comm_uart) {
+Controller::Controller(Display *display, UART_HandleTypeDef *comm_uart, Encoder *encoder_s, Encoder *encoder_az,
+                       Encoder *encoder_el) : display(display), comm_uart(comm_uart), encoder_s(encoder_s),
+                                              encoder_az(encoder_az), encoder_el(encoder_el) {
 
 }
 
@@ -52,6 +55,9 @@ void Controller::getRot2ProgAngle(float angle, uint8_t * angle_response) {
 void Controller::init() {
     HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
     display->init();
+    encoder_s->init();
+    encoder_az->init();
+    encoder_el->init();
 }
 
 void Controller::loop() {
@@ -62,8 +68,6 @@ void Controller::loop() {
         display->print(1, 10, (uint32_t)time.Seconds, 2);
         CommandPacket commandPacket;
         commandPacket.command = cmdReadAzEl;
-        this->display->print(0, 10, (char *) "      ");
-        this->display->print(0, 10, commands_queue_counter);
         this->queueCommand(&commandPacket);
     }
     if (commands_queue_counter){
@@ -71,6 +75,12 @@ void Controller::loop() {
             commands_queue_counter--;
         }
     }
+
+    this->display->print(0, 10, (char *) "      ");
+    this->display->print(0, 10, (uint32_t) encoder_az->getPosition());
+    this->display->print(0, 15,  (float)encoder_az->getDelta(), 2);
+
+
     display->refresh();
 }
 
@@ -91,11 +101,12 @@ bool Controller::sendCommand(CommandPacket *pPacket) {
             this->onUARTData();
             if (!this->validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
                 memset((void *)&this->cmd_to_process, 0, sizeof(this->cmd_to_process));
+                this->onRxError();
             } else {
                 this->handleCommand((CommandPacket *) &this->cmd_to_process, nullptr);
                 this->cmd_to_process.header = 0;
+                return true;
             }
-            return true;
         } else {
             this->onRxError();
         }

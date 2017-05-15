@@ -3,13 +3,18 @@
 //
 #include <Controller.h>
 #include <usart.h>
+#include <tim.h>
 #include "Display.h"
+#include "Encoder.h"
 #include "startup.h"
 #include "cstring"
 
 LCD_PCF8574_HandleTypeDef lcd;
 Display display(&lcd);
-Controller controller(&display, &huart1);
+Encoder encoder_s(&htim1, EN_1_BTN_GPIO_Port, EN_1_BTN_Pin);
+Encoder encoder_az(&htim3, EN_3_BTN_GPIO_Port, EN_3_BTN_Pin);
+Encoder encoder_el(&htim2, EN_2_BTN_GPIO_Port, EN_2_BTN_Pin);
+Controller controller(&display, &huart1, &encoder_s, &encoder_az, &encoder_el);
 
 void startup() {
 #pragma GCC diagnostic push

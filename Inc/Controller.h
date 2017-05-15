@@ -10,6 +10,8 @@ static const int MAX_COMMANDS_IN_QUEUE = 4;
 #include "Display.h"
 #include "Rot2Prog.h"
 #include "protocol.h"
+#include "Encoder.h"
+
 extern "C" {
 #include "crc.h"
 };
@@ -18,6 +20,9 @@ class Controller {
 private:
     Display * display;
     UART_HandleTypeDef *comm_uart;
+    Encoder *encoder_s;
+    Encoder *encoder_az;
+    Encoder *encoder_el;
     float az_current = 0.0f;
     float az_desired = 0.0f;
     float el_current = 0.0f;
@@ -37,7 +42,8 @@ private:
     void setEl_current(float el_current);
     void setEl_desired(float el_desired);
 public:
-    Controller(Display *display, UART_HandleTypeDef *comm_uart);
+    Controller(Display *display, UART_HandleTypeDef *comm_uart, Encoder *encoder_s, Encoder *encoder_az,
+                   Encoder *encoder_el);
 
     void handleUartRx(uint8_t *data, uint32_t len);
 
