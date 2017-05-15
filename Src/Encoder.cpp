@@ -34,7 +34,7 @@ int16_t Encoder::getDelta() {
 }
 
 float Encoder::getSpeedFactor() {
-    if (abs(position_delta) > 10){
+    if (abs(position_delta) > 6){
         return 1.0f;
     } else if (abs(position_delta) > 2){
         return 0.1f;

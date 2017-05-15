@@ -71,7 +71,7 @@ void Display::refresh() {
     if (el_current_refresh) {
         el_current_refresh = 0;
         print(2, 0, (char *) "EL        ");
-        print(2, (uint8_t) (3 + (el_current < 10 ? 2 : (el_current < 100 ? 1 : 0))), el_current, 2);
+        print(2, (uint8_t) (3 + (el_current < 10 ? 2 : (el_current < 100 ? 1 : 0)) + (el_current < 0 ? -1 : 0)), el_current, 2);
     }
     if (az_desired_refresh){
         az_desired_refresh = 0;
@@ -81,7 +81,7 @@ void Display::refresh() {
     if (el_desired_refresh){
         el_desired_refresh = 0;
         print(3, 0, (char *) "          ");
-        print(3, (uint8_t) (3 + (el_desired < 10 ? 2 : (el_desired < 100 ? 1 : 0))), el_desired, 2);
+        print(3, (uint8_t) (3 + (el_desired < 10 ? 2 : (el_desired < 100 ? 1 : 0))  + (el_desired < 0 ? -1 : 0)), el_desired, 2);
     }
     if (comm_tx_err_refresh){
         comm_tx_err_refresh = 0;
