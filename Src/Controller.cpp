@@ -7,6 +7,7 @@
 #include <rtc.h>
 #include <stm32f1xx_hal_rtc.h>
 #include <Encoder.h>
+#include <math.h>
 #include "Controller.h"
 
 Controller::Controller(Display *display, UART_HandleTypeDef *comm_uart, Encoder *encoder_s, Encoder *encoder_az,
@@ -76,10 +77,25 @@ void Controller::loop() {
         }
     }
 
-    this->display->print(0, 10, (char *) "      ");
-    this->display->print(0, 10, (uint32_t) encoder_az->getPosition());
-    this->display->print(0, 15,  (float)encoder_az->getDelta(), 2);
+    encoder_az->getPosition();
+    int8_t delta = (int8_t) encoder_az->getDelta();
+    if (delta){
+        if (encoder_az->getButton()){
+            setAz_desired(roundf(az_desired) + delta * 10);
+        } else {
+            setAz_desired((az_desired + (delta * encoder_az->getSpeedFactor())));
+        }
+    }
 
+    encoder_el->getPosition();
+    delta = (int8_t) encoder_el->getDelta();
+    if (delta){
+        if (encoder_el->getButton()){
+            setEl_desired(roundf(el_desired) + delta * 10);
+        } else {
+            setEl_desired((el_desired + (delta * encoder_el->getSpeedFactor())));
+        }
+    }
 
     display->refresh();
 }
@@ -144,6 +160,12 @@ void Controller::setAz_current(float az_current) {
 }
 
 void Controller::setAz_desired(float az_desired) {
+    if (az_desired > 360){
+        az_desired = 360;
+    }
+    if (az_desired < 0){
+        az_desired = 0;
+    }
     Controller::az_desired = az_desired;
     display->setAzTarget(az_desired);
 }
@@ -154,6 +176,12 @@ void Controller::setEl_current(float el_current) {
 }
 
 void Controller::setEl_desired(float el_desired) {
+    if (el_desired > 90){
+        el_desired = 90;
+    }
+    if (el_desired < -5){
+        el_desired = -5;
+    }
     Controller::el_desired = el_desired;
     display->setElTarget(el_desired);
 }
