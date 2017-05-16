@@ -5,7 +5,7 @@
 #ifndef QSRC_STM32_CONTROLLER_CONTROLLER_H
 #define QSRC_STM32_CONTROLLER_CONTROLLER_H
 
-static const int MAX_COMMANDS_IN_QUEUE = 4;
+static const int MAX_COMMANDS_IN_QUEUE = 14;
 
 #include "Display.h"
 #include "Rot2Prog.h"
@@ -30,6 +30,8 @@ private:
     uint16_t comm_tx_err = 0;
     uint16_t comm_rx_err = 0;
     RTC_TimeTypeDef last_time;
+    uint16_t raw_enc_az;
+    uint16_t raw_enc_el;
 
     volatile uint8_t cmd_buffer[sizeof(CommandPacket) + 2];
     volatile CommandPacket cmd_to_process;
@@ -77,7 +79,11 @@ public:
 
     void onRxError();
 
-    void queueCommand(const CommandPacket *const pPacket);
+    bool queueCommand(const CommandPacket *const pPacket);
+
+    void sendAzEl(float az, float el);
+
+    void checkCommandsQueue();
 };
 
 

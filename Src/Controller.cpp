@@ -70,20 +70,18 @@ void Controller::loop() {
         CommandPacket commandPacket;
         commandPacket.command = cmdReadAzEl;
         this->queueCommand(&commandPacket);
+        commandPacket.command = cmdReadEncoders;
+        this->queueCommand(&commandPacket);
     }
-    if (commands_queue_counter){
-        if (this->sendCommand(&commands_queue[commands_queue_counter-1])){
-            commands_queue_counter--;
-        }
-    }
+    checkCommandsQueue();
 
     encoder_az->getPosition();
     int8_t delta = (int8_t) encoder_az->getDelta();
     if (delta){
         if (encoder_az->getButton()){
-            setAz_desired(roundf(az_desired) + delta * 10);
+            sendAzEl(roundf(az_desired) + delta * 10, el_desired);
         } else {
-            setAz_desired((az_desired + (delta * encoder_az->getSpeedFactor())));
+            sendAzEl((az_desired + (delta * encoder_az->getSpeedFactor())), el_desired);
         }
     }
 
@@ -91,28 +89,40 @@ void Controller::loop() {
     delta = (int8_t) encoder_el->getDelta();
     if (delta){
         if (encoder_el->getButton()){
-            setEl_desired(roundf(el_desired) + delta * 10);
+            sendAzEl(az_desired, roundf(el_desired) + delta * 10);
         } else {
-            setEl_desired((el_desired + (delta * encoder_el->getSpeedFactor())));
+            sendAzEl(az_desired, (el_desired + (delta * encoder_el->getSpeedFactor())));
         }
     }
-
+    display->print(0, 10, raw_enc_el);
     display->refresh();
+}
+
+void Controller::checkCommandsQueue() {
+    if (commands_queue_counter){
+        if (sendCommand(&commands_queue[0])){
+            if (commands_queue_counter > 1){
+                for (int i = 0; i < commands_queue_counter; ++i) {
+                    commands_queue[i] = commands_queue[i + 1];
+                }
+            }
+            commands_queue_counter--;
+        }
+    }
 }
 
 bool Controller::sendCommand(CommandPacket *pPacket) {
     HAL_StatusTypeDef s;
     HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
     HAL_Delay(1);
-    s = HAL_UART_Transmit(this->comm_uart, (uint8_t *)pPacket, sizeof(CommandPacket), 1001);
-    HAL_Delay(10);
+    s = HAL_UART_Transmit(this->comm_uart, (uint8_t *)pPacket, sizeof(CommandPacket), 100);
     HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
-
     if (s == HAL_OK){
         __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_RXNE);
         __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_ORE);
         memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
         s = HAL_UART_Receive(this->comm_uart, (uint8_t *) &this->cmd_buffer, sizeof(this->cmd_buffer), 200);
+        HAL_Delay(20);
         if (s == HAL_OK){
             this->onUARTData();
             if (!this->validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
@@ -124,6 +134,9 @@ bool Controller::sendCommand(CommandPacket *pPacket) {
                 return true;
             }
         } else {
+            if (s == HAL_TIMEOUT){
+                this->onTxError();
+            }
             this->onRxError();
         }
 
@@ -145,13 +158,21 @@ uint16_t Controller::getPacketCRC(const CommandPacket *pPacket) const { return c
 
 
 void Controller::process_set_command(Rot2ProgCmd *pCmd) {
+    float az = readRot2ProgAngle(pCmd->azimuth, pCmd->azimuth_resolution);
+    float el = readRot2ProgAngle(pCmd->elevation, pCmd->elevation_resolution);
+    sendAzEl(az, el);
+}
+
+void Controller::sendAzEl(float az, float el) {
     CommandPacket commandPacket;
     commandPacket.command = cmdGoToAzEl;
-    commandPacket.payload.goToAzEl.az = readRot2ProgAngle(pCmd->azimuth, pCmd->azimuth_resolution);
-    commandPacket.payload.goToAzEl.el = readRot2ProgAngle(pCmd->elevation, pCmd->elevation_resolution);
-    setAz_desired(commandPacket.payload.goToAzEl.az);
-    setEl_desired(commandPacket.payload.goToAzEl.el);
-    queueCommand(&commandPacket);
+    commandPacket.payload.goToAzEl.az = az;
+    commandPacket.payload.goToAzEl.el = el;
+
+    if (queueCommand(&commandPacket)){
+        setAz_desired(commandPacket.payload.goToAzEl.az);
+        setEl_desired(commandPacket.payload.goToAzEl.el);
+    }
 }
 
 void Controller::setAz_current(float az_current) {
@@ -179,8 +200,8 @@ void Controller::setEl_desired(float el_desired) {
     if (el_desired > 90){
         el_desired = 90;
     }
-    if (el_desired < -5){
-        el_desired = -5;
+    if (el_desired < 0){
+        el_desired = 0;
     }
     Controller::el_desired = el_desired;
     display->setElTarget(el_desired);
@@ -229,6 +250,10 @@ void Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse)
             setAz_current(pPacket->payload.readAzElResponse.az);
             setEl_current(pPacket->payload.readAzElResponse.el);
             break;
+        case cmdReadEncodersResponse:
+            raw_enc_az = pPacket->payload.readEncodersResponse.az;
+            raw_enc_el = pPacket->payload.readEncodersResponse.el;
+            break;
         default:
             break;
     }
@@ -248,9 +273,10 @@ void Controller::onRxError() {
     display->setComm_rx_err(comm_rx_err);
 }
 
-void Controller::queueCommand(const CommandPacket *const pPacket) {
+bool Controller::queueCommand(const CommandPacket *const pPacket) {
     if (commands_queue_counter >= MAX_COMMANDS_IN_QUEUE){
         // TODO: error handling
+        return false;
     } else {
         memcpy(&commands_queue[commands_queue_counter], pPacket, sizeof(CommandPacket));
         commands_queue[commands_queue_counter].header = packetHeader;
@@ -258,5 +284,6 @@ void Controller::queueCommand(const CommandPacket *const pPacket) {
 
         commands_queue_counter++;
     }
+    return true;
 }
 
