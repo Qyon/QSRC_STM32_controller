@@ -3,6 +3,7 @@
 //
 
 
+#include <cstring>
 #include "Display.h"
 void lcd_error(LCD_RESULT x){
 
@@ -85,13 +86,23 @@ void Display::refresh() {
     }
     if (comm_tx_err_refresh){
         comm_tx_err_refresh = 0;
-        print(2, 10, (char *) "          ");
-        print(2, 10, comm_tx_err);
+        print(3, 10, (char *) "     ");
+        print(3, 10, comm_tx_err);
     }
     if (comm_rx_err_refresh){
         comm_rx_err_refresh = 0;
-        print(3, 10, (char *) "          ");
-        print(3, 10, comm_rx_err);
+        print(3, 15, (char *) "     ");
+        print(3, 15, comm_rx_err);
+    }
+    if (mode_setting_value_refresh){
+        mode_setting_value_refresh = 0;
+        print(1, 10, (char *) "          ");
+        print(1, 10, mode_setting_value, 2);
+    }
+    if (mode_setting_name_refresh){
+        mode_setting_name_refresh = 0;
+        print(0, 10, (char *) "          ");
+        print(0, 10, mode_setting_name);
     }
 }
 
@@ -136,6 +147,20 @@ void Display::setComm_rx_err(uint16_t comm_rx_err) {
     if (Display::comm_rx_err != comm_rx_err) {
         Display::comm_rx_err = comm_rx_err;
         comm_rx_err_refresh = 1;
+    }
+}
+
+void Display::setMode_setting_value(float mode_setting_value) {
+    if (Display::mode_setting_value != mode_setting_value){
+        Display::mode_setting_value = mode_setting_value;
+        mode_setting_value_refresh = 1;
+    }
+}
+
+void Display::setMode_setting_name(char * mode_setting_name) {
+    if (strcmp(mode_setting_name, Display::mode_setting_name)){
+        strcpy(Display::mode_setting_name, mode_setting_name);
+        mode_setting_name_refresh = 1;
     }
 }
 

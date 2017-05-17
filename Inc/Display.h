@@ -32,6 +32,15 @@ private:
     float el_desired = 0.0f;
     uint8_t el_desired_refresh = 1;
     uint16_t comm_tx_err = 0;
+    uint8_t mode_setting_name_refresh = 1;
+    uint8_t mode_setting_value_refresh = 1;
+    char mode_setting_name[11];
+public:
+    void setMode_setting_value(float mode_setting_value);
+    void setMode_setting_name(char *mode_setting_name);
+
+private:
+    float mode_setting_value = 0.0f;
 public:
     void setComm_tx_err(uint16_t comm_tx_err);
 

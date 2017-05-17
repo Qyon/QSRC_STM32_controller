@@ -16,6 +16,13 @@ extern "C" {
 #include "crc.h"
 };
 
+enum ModeSetting{
+    msNone = 0,
+    msSetAz = 1,
+    msSetEl = 2,
+    msLast = 3,
+};
+
 class Controller {
 private:
     Display * display;
@@ -32,6 +39,11 @@ private:
     RTC_TimeTypeDef last_time;
     uint16_t raw_enc_az;
     uint16_t raw_enc_el;
+
+    ModeSetting current_mode_setting;
+    bool mode_setting_active;
+    char current_mode_setting_name[11];
+    float set_az_el_value = 0.0f;
 
     volatile uint8_t cmd_buffer[sizeof(CommandPacket) + 2];
     volatile CommandPacket cmd_to_process;
@@ -84,6 +96,8 @@ public:
     void sendAzEl(float az, float el);
 
     void checkCommandsQueue();
+
+    char *getModeSettingName(ModeSetting setting);
 };
 
 

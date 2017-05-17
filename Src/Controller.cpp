@@ -93,6 +93,103 @@ void Controller::loop() {
             sendAzEl(az_desired, (el_desired + (delta * encoder_el->getSpeedFactor())));
         }
     }
+
+    encoder_s->getPosition();
+    delta = (int8_t) encoder_s->getDelta();
+    static uint32_t mode_active_start = HAL_GetTick();
+    if (!mode_setting_active){
+        if (delta != 0){
+            if (!mode_setting_active && HAL_GetTick() - mode_active_start > 500){
+                if (delta > 0){
+                    current_mode_setting = (ModeSetting) ((int)current_mode_setting + 1);
+                    if (current_mode_setting >= msLast){
+                        current_mode_setting = msNone;
+                    }
+                    mode_active_start = HAL_GetTick();
+                }
+                if (delta < 0){
+                    if (current_mode_setting == msNone){
+                        current_mode_setting = msSetEl;
+                    } else {
+                        current_mode_setting = (ModeSetting) ((int)current_mode_setting - 1);
+                    }
+                    mode_active_start = HAL_GetTick();
+                }
+            }
+        }
+        display->setMode_setting_name(getModeSettingName(current_mode_setting));
+        if (encoder_s->getButton()){
+            mode_active_start = HAL_GetTick();
+            mode_setting_active = 1;
+            switch (current_mode_setting){
+                case msSetAz:
+                    set_az_el_value = az_current;
+                    display->setMode_setting_value(set_az_el_value);
+                    break;
+                case msSetEl:
+                    set_az_el_value = el_current;
+                    display->setMode_setting_value(set_az_el_value);
+                    break;
+                case msNone:
+                case msLast:
+                default:
+                    break;
+            }
+        }
+    } else {
+        if (delta){
+            switch (current_mode_setting){
+                case msSetAz:
+                    set_az_el_value += delta * encoder_s->getSpeedFactor();
+                    display->setMode_setting_value(set_az_el_value);
+                    break;
+                case msSetEl:
+                    set_az_el_value += delta * encoder_s->getSpeedFactor();
+                    display->setMode_setting_value(set_az_el_value);
+                    break;
+                case msNone:
+                case msLast:
+                default:
+                    mode_setting_active = 0;
+                    break;
+            }
+        }
+        if (encoder_s->getButton() && HAL_GetTick() - mode_active_start > 500){
+            CommandPacket commandPacket;
+
+            switch (current_mode_setting){
+                case msSetAz:
+                    commandPacket.command = cmdSetAzEl;
+                    commandPacket.payload.setAzEl.az = set_az_el_value;
+                    commandPacket.payload.setAzEl.el = el_current;
+
+                    if (queueCommand(&commandPacket)){
+                        mode_setting_active = 0;
+                        current_mode_setting = msNone;
+                        setAz_desired(set_az_el_value);
+                    }
+                    break;
+                case msSetEl:
+                    commandPacket.command = cmdSetAzEl;
+                    commandPacket.payload.setAzEl.el = set_az_el_value;
+                    commandPacket.payload.setAzEl.az = az_current;
+
+                    if (queueCommand(&commandPacket)){
+                        mode_setting_active = 0;
+                        current_mode_setting = msNone;
+                        setEl_desired(set_az_el_value);
+                    }
+
+                    break;
+                case msNone:
+                case msLast:
+                default:
+                    break;
+            }
+        }
+    }
+
+
     display->refresh();
 }
 
@@ -283,5 +380,22 @@ bool Controller::queueCommand(const CommandPacket *const pPacket) {
         commands_queue_counter++;
     }
     return true;
+}
+
+char *Controller::getModeSettingName(ModeSetting setting) {
+    switch (setting){
+        case msSetAz:
+            strcpy(current_mode_setting_name, "Ustaw AZ");
+            break;
+        case msSetEl:
+            strcpy(current_mode_setting_name, "Ustaw EL");
+            break;
+        case msNone:
+        case msLast:
+        default:
+            strcpy(current_mode_setting_name, "Normal");
+            break;
+    }
+    return current_mode_setting_name;
 }
 
