@@ -62,17 +62,16 @@ void Controller::init() {
 }
 
 void Controller::loop() {
-    RTC_TimeTypeDef time;
-    HAL_RTC_GetTime(&hrtc, &time, RTC_FORMAT_BIN);
-    if (time.Seconds != last_time.Seconds){
-        last_time = time;
-        display->print(1, 10, (uint32_t)time.Seconds, 2);
+    static uint32_t tickstart = HAL_GetTick();
+    if (HAL_GetTick() - tickstart > 300){
         CommandPacket commandPacket;
         commandPacket.command = cmdReadAzEl;
         this->queueCommand(&commandPacket);
         commandPacket.command = cmdReadEncoders;
         this->queueCommand(&commandPacket);
+        tickstart = HAL_GetTick();
     }
+
     checkCommandsQueue();
 
     encoder_az->getPosition();
@@ -94,7 +93,6 @@ void Controller::loop() {
             sendAzEl(az_desired, (el_desired + (delta * encoder_el->getSpeedFactor())));
         }
     }
-    display->print(0, 10, raw_enc_el);
     display->refresh();
 }
 
