@@ -38,7 +38,7 @@ void HAL_UART_TxCpltCallback(UART_HandleTypeDef *huart)
 }
 
 void HAL_UART_ErrorCallback(UART_HandleTypeDef *huart) {
-    controller.onUSARTRxComplete(huart);
+    controller.onUSARTError(huart);
 }
 
 void USB_CDC_ReceiveHandler(uint8_t *buffer, uint32_t len){

@@ -8,6 +8,8 @@
 #include <stm32f1xx_hal_rtc.h>
 #include <Encoder.h>
 #include <math.h>
+#include <usart.h>
+#include <stm32f1xx_hal_uart.h>
 #include "Controller.h"
 
 Controller::Controller(Display *display, UART_HandleTypeDef *comm_uart, Encoder *encoder_s, Encoder *encoder_az,
@@ -67,16 +69,26 @@ void Controller::loop() {
         CommandPacket commandPacket;
         commandPacket.command = cmdReadAzEl;
         this->queueCommand(&commandPacket);
-        commandPacket.command = cmdReadEncoders;
-        this->queueCommand(&commandPacket);
+//        commandPacket.command = cmdReadEncoders;
+//        this->queueCommand(&commandPacket);
         tickstart = HAL_GetTick();
     }
+    bool response_received = false;
+    if (this->cmd_to_process.header){
+        if (!this->handleCommand((CommandPacket *) &this->cmd_to_process, nullptr)){
+            this->onRxError(cmd_to_process.command);
+        }
+        this->cmd_to_process.header = 0;
+        response_received = true;
+    }
 
-    if (this->comm_tx_err > 10){
-        HAL_Delay(1000);
-        this->comm_tx_err = 0;
+    if (checkCommandsQueue() || response_received){
+        this->last_command_send_tick = HAL_GetTick();
     } else {
-        checkCommandsQueue();
+        if (HAL_GetTick() - this->last_command_send_tick > 500){
+            this->onRxError(0);
+            this->comm_uart->State = HAL_UART_STATE_READY;
+        }
     }
 
     encoder_az->getPosition();
@@ -198,7 +210,7 @@ void Controller::loop() {
     display->refresh();
 }
 
-void Controller::checkCommandsQueue() {
+bool Controller::checkCommandsQueue() {
     if (commands_queue_counter){
         if (sendCommand(&commands_queue[0])){
             if (commands_queue_counter > 1){
@@ -207,41 +219,23 @@ void Controller::checkCommandsQueue() {
                 }
             }
             commands_queue_counter--;
+            return true;
         }
+        return false;
     }
+    return true;
 }
 
 bool Controller::sendCommand(CommandPacket *pPacket) {
-    HAL_StatusTypeDef s;
-    HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
-    HAL_Delay(1);
-    s = HAL_UART_Transmit(this->comm_uart, (uint8_t *)pPacket, sizeof(CommandPacket), 100);
-    HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
-    if (s == HAL_OK){
-        __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_RXNE);
-        __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_ORE);
-        memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
-        s = HAL_UART_Receive(this->comm_uart, (uint8_t *) &this->cmd_buffer, sizeof(this->cmd_buffer), 500);
-        //HAL_Delay(20);
-        if (s == HAL_OK){
-            this->onUARTData();
-            if (!this->validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
-                memset((void *)&this->cmd_to_process, 0, sizeof(this->cmd_to_process));
-                this->onRxError();
-            } else {
-                this->handleCommand((CommandPacket *) &this->cmd_to_process, nullptr);
-                this->cmd_to_process.header = 0;
-                return true;
-            }
-        } else {
-            if (s == HAL_TIMEOUT){
-                this->onTxError();
-            }
-            this->onRxError();
-        }
+    if (this->comm_uart->State == HAL_UART_STATE_READY && !this->cmd_to_process.header){
+        HAL_StatusTypeDef s;
+        HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
+        HAL_Delay(1);
 
-    } else {
-        //this->onTxError();
+        s = HAL_UART_Transmit_IT(this->comm_uart, (uint8_t *)pPacket, sizeof(CommandPacket));
+        if (s == HAL_OK){
+            return true;
+        }
     }
     return false;
 }
@@ -250,7 +244,6 @@ bool Controller::validateCommandPacket(CommandPacket *pPacket) {
     if (pPacket->header != packetHeader){
         return false;
     }
-
     return getPacketCRC(pPacket) == pPacket->crc;
 }
 
@@ -278,6 +271,10 @@ void Controller::sendAzEl(float az, float el) {
 void Controller::setAz_current(float az_current) {
     Controller::az_current = az_current;
     display->setAz(az_current);
+    if (!first_read_done_az){
+        setAz_desired(az_current);
+        first_read_done_az = true;
+    }
 }
 
 void Controller::setAz_desired(float az_desired) {
@@ -294,6 +291,10 @@ void Controller::setAz_desired(float az_desired) {
 void Controller::setEl_current(float el_current) {
     Controller::el_current = el_current;
     display->setEl(el_current);
+    if (!first_read_done_el){
+        setEl_desired(el_current);
+        first_read_done_el = true;
+    }
 }
 
 void Controller::setEl_desired(float el_desired) {
@@ -324,27 +325,57 @@ void Controller::onUSARTTxComplete(UART_HandleTypeDef *huart) {
     if (huart->Instance != this->comm_uart->Instance){
         return;
     }
-    //HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
+    HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
+    HAL_UART_Receive_IT(this->comm_uart, const_cast<uint8_t *>(&cmd_in), 1);
 }
 
+void Controller::onUSARTError(UART_HandleTypeDef *huart) {
+    HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
+    this->onTxError(0);
+}
 
 void Controller::onUSARTRxComplete(UART_HandleTypeDef *huart) {
     if (huart->Instance != this->comm_uart->Instance){
         return;
     }
+    cmd_buffer[cmd_buffer_index] = cmd_in;
+    if (this->validateCommandPacket((CommandPacket *) &cmd_buffer)){
+        memcpy((void *)&(cmd_to_process), (const void *) &cmd_buffer, sizeof(cmd_to_process));
+        memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
+        cmd_buffer_index = 0;
+    } else {
+        cmd_buffer_index++;
+        if (cmd_buffer_index >= sizeof(this->cmd_buffer)){
+            cmd_buffer_index = sizeof(this->cmd_buffer) - 1;
+            for (uint8_t i = 0; i < sizeof(this->cmd_buffer) - 1; ++i) {
+                this->cmd_buffer[i] = this->cmd_buffer[i+1];
+            }
+        }
+        if (this->validateCommandPacket((CommandPacket *) &cmd_buffer)){
+            memcpy((void *)&(cmd_to_process), (const void *) &cmd_buffer, sizeof(cmd_to_process));
+            memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
+            cmd_buffer_index = 0;
+        } else {
+            HAL_UART_Receive_IT(this->comm_uart, const_cast<uint8_t *>(&cmd_in), 1);
+        }
+    }
 }
 
 void Controller::onUARTData() {
-    memcpy((void *)&(cmd_to_process), (const void *) &cmd_buffer[1], sizeof(cmd_to_process));
+    if (this->validateCommandPacket((CommandPacket *) &cmd_buffer[1])){
+        memcpy((void *)&(cmd_to_process), (const void *) &cmd_buffer[1], sizeof(cmd_to_process));
+    } else if (this->validateCommandPacket((CommandPacket *) &cmd_buffer[0])){
+        memcpy((void *)&(cmd_to_process), (const void *) &cmd_buffer[0], sizeof(cmd_to_process));
+    }
 }
 
-void Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse) {
+bool Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse) {
     if (nullptr != pResponse){
         memset(pResponse, 0, sizeof(CommandPacket));
         pResponse->header = packetHeader;
         pResponse->command = cmdOkResponse;
     }
-
+    bool result = true;
     switch (pPacket->command){
         case cmdReadAzElResponse:
             setAz_current(pPacket->payload.readAzElResponse.az);
@@ -354,27 +385,36 @@ void Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse)
             raw_enc_az = pPacket->payload.readEncodersResponse.az;
             raw_enc_el = pPacket->payload.readEncodersResponse.el;
             break;
+        case cmdOkResponse:
+            break;
         default:
+            result = false;
             break;
     }
     if (nullptr != pResponse){
         pResponse->crc = getPacketCRC(pResponse);
     }
-
+    return result;
 }
 
-void Controller::onTxError() {
+void Controller::onTxError(uint16_t err_code) {
     comm_tx_err++;
+    if (err_code){
+        comm_tx_err = err_code;
+    }
     display->setComm_tx_err(comm_tx_err);
 }
 
-void Controller::onRxError() {
+void Controller::onRxError(uint16_t err_code) {
     comm_rx_err++;
+    if (err_code){
+        comm_rx_err = err_code;
+    }
     display->setComm_rx_err(comm_rx_err);
 }
 
 bool Controller::queueCommand(const CommandPacket *const pPacket) {
-    if (commands_queue_counter >= MAX_COMMANDS_IN_QUEUE){
+    if (commands_queue_counter >= MAX_COMMANDS_IN_QUEUE-1){
         // TODO: error handling
         return false;
     } else {
@@ -403,4 +443,5 @@ char *Controller::getModeSettingName(ModeSetting setting) {
     }
     return current_mode_setting_name;
 }
+
 

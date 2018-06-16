@@ -39,13 +39,17 @@ private:
     RTC_TimeTypeDef last_time;
     uint16_t raw_enc_az;
     uint16_t raw_enc_el;
+    bool first_read_done_az = false;
+    bool first_read_done_el = false;
 
     ModeSetting current_mode_setting;
     bool mode_setting_active;
     char current_mode_setting_name[11];
     float set_az_el_value = 0.0f;
 
+    volatile uint8_t cmd_in;
     volatile uint8_t cmd_buffer[sizeof(CommandPacket) + 2];
+    volatile uint8_t cmd_buffer_index = 0;
     volatile CommandPacket cmd_to_process;
 
     CommandPacket commands_queue[MAX_COMMANDS_IN_QUEUE];
@@ -55,6 +59,7 @@ private:
     void setAz_desired(float az_desired);
     void setEl_current(float el_current);
     void setEl_desired(float el_desired);
+    uint32_t last_command_send_tick;
 public:
     Controller(Display *display, UART_HandleTypeDef *comm_uart, Encoder *encoder_s, Encoder *encoder_az,
                    Encoder *encoder_el);
@@ -74,6 +79,7 @@ public:
     void getRot2ProgAngle(float angle, uint8_t *angle_response);
 
     void onUSARTTxComplete(UART_HandleTypeDef *huart);
+    void onUSARTError(UART_HandleTypeDef *huart);
 
     void onUSARTRxComplete(UART_HandleTypeDef *huart);
 
@@ -81,23 +87,25 @@ public:
 
     uint16_t getPacketCRC(const CommandPacket *pPacket) const;
 
-    void handleCommand(CommandPacket *pPacket, CommandPacket *pResponse);
+    bool handleCommand(CommandPacket *pPacket, CommandPacket *pResponse);
 
     void onUARTData();
 
     bool sendCommand(CommandPacket *pPacket);
 
-    void onTxError();
+    void onTxError(uint16_t err_code);
 
-    void onRxError();
+    void onRxError(uint16_t err_code);
 
     bool queueCommand(const CommandPacket *const pPacket);
 
     void sendAzEl(float az, float el);
 
-    void checkCommandsQueue();
+    bool checkCommandsQueue();
 
     char *getModeSettingName(ModeSetting setting);
+
+
 };
 
 
