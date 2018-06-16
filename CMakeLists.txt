@@ -52,13 +52,13 @@ add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMENT "Building ${HEX_FILE} \nBuilding ${BIN_FILE}")
 
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-        COMMAND rm -f E:/FIRMWARE.bin
-        COMMAND cp ${BIN_FILE} E:/
+        COMMAND rm -f G:/FIRMWARE.bin
+        COMMAND cp ${BIN_FILE} G:/
         COMMENT "Burning ${BIN_FILE}")
 
 set(CMAKE_CXX_STANDARD 11)
 
-add_custom_target(program
-        DEPENDS ${PROJECT_NAME}.elf
-        COMMAND D:/Programy/stlink-1.3.0-win64/bin/st-flash  --reset write ${BIN_FILE} 0x08000000
-        COMMENT "flashing ${BIN_FILE}")
+#add_custom_target(program
+#        DEPENDS ${PROJECT_NAME}.elf
+#        COMMAND D:/Programy/stlink-1.3.0-win64/bin/st-flash  --reset write ${BIN_FILE} 0x08000000
+#        COMMENT "flashing ${BIN_FILE}")

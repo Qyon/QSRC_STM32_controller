@@ -14,9 +14,9 @@ Encoder::Encoder(TIM_HandleTypeDef *htimer, GPIO_TypeDef *btn_gpio, uint16_t btn
 
 int32_t Encoder::getPosition() {
     volatile uint16_t pulse_count = (uint16_t) htimer->Instance->CNT;
-    if (abs(last_pulse_count - pulse_count) < 4){
-        return position;
-    }
+//    if (abs(last_pulse_count - pulse_count) < 4){
+//        return position;
+//    }
     htimer->Instance->CNT = RELOAD_VALUE << 2;
     if (reverse){
         position_delta = (int8_t) (RELOAD_VALUE -  (pulse_count >> 2));
@@ -42,7 +42,7 @@ float Encoder::getSpeedFactor() {
     } else if (abs(position_delta) > 2){
         return 0.1f;
     }
-    return 0.01f;
+    return 0.1f;
 }
 
 bool Encoder::getButton() {

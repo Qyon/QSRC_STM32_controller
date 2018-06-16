@@ -72,7 +72,12 @@ void Controller::loop() {
         tickstart = HAL_GetTick();
     }
 
-    checkCommandsQueue();
+    if (this->comm_tx_err > 10){
+        HAL_Delay(1000);
+        this->comm_tx_err = 0;
+    } else {
+        checkCommandsQueue();
+    }
 
     encoder_az->getPosition();
     int8_t delta = (int8_t) encoder_az->getDelta();
@@ -216,8 +221,8 @@ bool Controller::sendCommand(CommandPacket *pPacket) {
         __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_RXNE);
         __HAL_UART_CLEAR_FLAG(this->comm_uart, UART_FLAG_ORE);
         memset((void *)&this->cmd_buffer, 0, sizeof(this->cmd_buffer));
-        s = HAL_UART_Receive(this->comm_uart, (uint8_t *) &this->cmd_buffer, sizeof(this->cmd_buffer), 200);
-        HAL_Delay(20);
+        s = HAL_UART_Receive(this->comm_uart, (uint8_t *) &this->cmd_buffer, sizeof(this->cmd_buffer), 500);
+        //HAL_Delay(20);
         if (s == HAL_OK){
             this->onUARTData();
             if (!this->validateCommandPacket((CommandPacket *) &this->cmd_to_process)){
@@ -236,7 +241,7 @@ bool Controller::sendCommand(CommandPacket *pPacket) {
         }
 
     } else {
-        this->onTxError();
+        //this->onTxError();
     }
     return false;
 }
