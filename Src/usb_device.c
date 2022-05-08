@@ -75,12 +75,12 @@ void MX_USB_DEVICE_Init(void)
 
 
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-    HAL_Delay(5);
+    HAL_Delay(50);
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-    HAL_Delay(5);
+    HAL_Delay(50);
 
   /* USER CODE END USB_DEVICE_Init_PreTreatment */
   
