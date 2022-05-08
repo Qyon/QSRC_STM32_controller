@@ -9,7 +9,7 @@
   *          This file contains:
   *           - Data structures and the address mapping for all peripherals
   *           - Peripheral's registers declarations and bits definition
-  *           - Macros to access peripheral’s registers hardware
+  *           - Macros to access peripheralï¿½s registers hardware
   *  
   ******************************************************************************
   * @attention
@@ -570,7 +570,7 @@ typedef struct
   */
 
 
-#define FLASH_BASE            0x08000000UL /*!< FLASH base address in the alias region */
+#define FLASH_BASE            0x08001000UL /*!< FLASH base address in the alias region */
 #define FLASH_BANK1_END       0x0801FFFFUL /*!< FLASH END address of bank1 */
 #define SRAM_BASE             0x20000000UL /*!< SRAM base address in the alias region */
 #define PERIPH_BASE           0x40000000UL /*!< Peripheral base address in the alias region */
