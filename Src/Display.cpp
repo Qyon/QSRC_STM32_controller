@@ -43,13 +43,38 @@ void Display::setRC(uint8_t row, uint8_t col) const {
     LCD_Locate(col, row);
 }
 
-void Display::print(uint8_t row, uint8_t col, float value, uint8_t digits) {
+void Display::print(uint8_t row, uint8_t col, float number, uint8_t digits) {
     setRC(row, col);
-    char fs[LCD_X+1];
-    sprintf(fs, "%%0.%df", digits);
-    char buf[LCD_X+1];
-    sprintf(buf, fs, value);
-    LCD_String(buf);
+    // Handle negative numbers
+    if (number < 0.0f) {
+        LCD_String("-");
+        number = -number;
+    }
+
+    // Round correctly so that print(1.999, 2) prints as "2.00"
+    double rounding = 0.5;
+    for (uint8_t i = 0; i < digits; ++i)
+        rounding /= 10.0;
+
+    number += rounding;
+
+    // Extract the integer part of the number and print it
+    unsigned long int_part = (unsigned long) number;
+    double remainder = number - (float) int_part;
+    LCD_Int(int_part);
+
+    // Print the decimal point, but only if there are digits beyond
+    if (digits > 0) {
+        LCD_String(".");
+    }
+
+    // Extract digits from the remainder one at a time
+    while (digits-- > 0) {
+        remainder *= 10.0;
+        int toPrint = (int)(remainder);
+        LCD_Int(toPrint);
+        remainder -= toPrint;
+    }
 }
 
 void Display::print(uint8_t row, uint8_t col, int32_t value) {
