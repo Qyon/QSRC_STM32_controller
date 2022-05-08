@@ -120,8 +120,13 @@ void Display::refresh() {
     }
     if (mode_setting_name_refresh){
         mode_setting_name_refresh = 0;
-        print(0, 10, (char *) "          ");
-        print(0, 10, mode_setting_name);
+        if (mode_setting_active) {
+            print(0, 10, (char *) ">         ");
+            print(0, 11, mode_setting_name);
+        } else {
+            print(0, 10, (char *) "          ");
+            print(0, 10, mode_setting_name);
+        }
     }
 }
 
@@ -179,6 +184,13 @@ void Display::setMode_setting_value(float mode_setting_value) {
 void Display::setMode_setting_name(char * mode_setting_name) {
     if (strcmp(mode_setting_name, Display::mode_setting_name)){
         strcpy(Display::mode_setting_name, mode_setting_name);
+        mode_setting_name_refresh = 1;
+    }
+}
+
+void Display::setMode_setting_active(bool active) {
+    if (mode_setting_active != active){
+        mode_setting_active = active;
         mode_setting_name_refresh = 1;
     }
 }

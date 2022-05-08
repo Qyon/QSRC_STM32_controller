@@ -36,8 +36,10 @@ private:
     uint8_t mode_setting_name_refresh = 1;
     uint8_t mode_setting_value_refresh = 1;
     char mode_setting_name[11];
+    bool mode_setting_active = false;
 public:
     void setMode_setting_value(float mode_setting_value);
+    void setMode_setting_active(bool active);
     void setMode_setting_name(char *mode_setting_name);
 
 private:

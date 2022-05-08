@@ -10,7 +10,7 @@
 #include "cstring"
 
 Display display(&hi2c1);
-Encoder encoder_s(&htim1, EN_1_BTN_GPIO_Port, EN_1_BTN_Pin, true);
+Encoder encoder_s(&htim1, EN_1_BTN_GPIO_Port, EN_1_BTN_Pin, false);
 Encoder encoder_az(&htim3, EN_3_BTN_GPIO_Port, EN_3_BTN_Pin, false);
 Encoder encoder_el(&htim2, EN_2_BTN_GPIO_Port, EN_2_BTN_Pin, true);
 Controller controller(&display, &huart1, &encoder_s, &encoder_az, &encoder_el);

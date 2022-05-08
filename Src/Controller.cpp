@@ -115,9 +115,10 @@ void Controller::loop() {
     encoder_s->getPosition();
     delta = (int8_t) encoder_s->getDelta();
     static uint32_t mode_active_start = HAL_GetTick();
+    display->setMode_setting_active(mode_setting_active);
     if (!mode_setting_active){
         if (delta != 0){
-            if (!mode_setting_active && HAL_GetTick() - mode_active_start > 500){
+            if (HAL_GetTick() - mode_active_start > 500){
                 if (delta > 0){
                     current_mode_setting = (ModeSetting) ((int)current_mode_setting + 1);
                     if (current_mode_setting >= msLast){
@@ -138,7 +139,7 @@ void Controller::loop() {
         display->setMode_setting_name(getModeSettingName(current_mode_setting));
         if (encoder_s->getButton()){
             mode_active_start = HAL_GetTick();
-            mode_setting_active = 1;
+            mode_setting_active = true;
             switch (current_mode_setting){
                 case msSetAz:
                     set_az_el_value = az_current;
@@ -150,6 +151,7 @@ void Controller::loop() {
                     break;
                 case msNone:
                 case msLast:
+                    mode_setting_active = false;
                 default:
                     break;
             }
@@ -168,7 +170,7 @@ void Controller::loop() {
                 case msNone:
                 case msLast:
                 default:
-                    mode_setting_active = 0;
+                    mode_setting_active = false;
                     break;
             }
         }
@@ -182,7 +184,7 @@ void Controller::loop() {
                     commandPacket.payload.setAzEl.el = el_current;
 
                     if (queueCommand(&commandPacket)){
-                        mode_setting_active = 0;
+                        mode_setting_active = false;
                         current_mode_setting = msNone;
                         setAz_desired(set_az_el_value);
                     }
@@ -193,7 +195,7 @@ void Controller::loop() {
                     commandPacket.payload.setAzEl.az = az_current;
 
                     if (queueCommand(&commandPacket)){
-                        mode_setting_active = 0;
+                        mode_setting_active = false;
                         current_mode_setting = msNone;
                         setEl_desired(set_az_el_value);
                     }

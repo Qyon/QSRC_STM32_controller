@@ -13,8 +13,8 @@ Encoder::Encoder(TIM_HandleTypeDef *htimer, GPIO_TypeDef *btn_gpio, uint16_t btn
 }
 
 int32_t Encoder::getPosition() {
-    volatile auto pulse_count = (uint16_t) htimer->Instance->CNT;
-    auto diff = (int16_t)(uint16_t)(last_pulse_count - pulse_count);
+    volatile auto pulse_count = (uint16_t) (htimer->Instance->CNT & ~0b11);
+    auto diff = ((int16_t)(uint16_t)(last_pulse_count - pulse_count)) / 4;
     last_pulse_count = pulse_count;
     if (reverse) {
         position_delta = (int16_t)-diff;
