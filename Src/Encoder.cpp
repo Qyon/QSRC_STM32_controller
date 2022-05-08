@@ -13,23 +13,21 @@ Encoder::Encoder(TIM_HandleTypeDef *htimer, GPIO_TypeDef *btn_gpio, uint16_t btn
 }
 
 int32_t Encoder::getPosition() {
-    volatile uint16_t pulse_count = (uint16_t) htimer->Instance->CNT;
-//    if (abs(last_pulse_count - pulse_count) < 4){
-//        return position;
-//    }
-    htimer->Instance->CNT = RELOAD_VALUE << 2;
-    if (reverse){
-        position_delta = (int8_t) (RELOAD_VALUE -  (pulse_count >> 2));
-    } else {
-        position_delta = (int8_t) ((pulse_count >> 2) - RELOAD_VALUE);
+    volatile uint8_t pulse_count = (uint16_t) htimer->Instance->CNT;
+    auto diff = (int16_t)(uint16_t)(last_pulse_count - pulse_count);
+    last_pulse_count = pulse_count;
+    if (reverse) {
+        position_delta = (int16_t)-diff;
     }
-    position += position_delta;
-    return position;
+    else {
+        position_delta = diff;
+    }
+    return 0;
 }
 
 void Encoder::init() {
     HAL_TIM_Encoder_Start(htimer, TIM_CHANNEL_ALL);
-    htimer->Instance->CNT = RELOAD_VALUE << 2;
+    last_pulse_count =  htimer->Instance->CNT;
 }
 
 int16_t Encoder::getDelta() {

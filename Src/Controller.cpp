@@ -69,6 +69,7 @@ void Controller::loop() {
         CommandPacket commandPacket;
         commandPacket.command = cmdReadAzEl;
         this->queueCommand(&commandPacket);
+        //TODO: dlaczego to nie działa poprawnie?! Dlaczego dostaję 2 odpowiedzi z cmdReadEncodersResponse?
 //        commandPacket.command = cmdReadEncoders;
 //        this->queueCommand(&commandPacket);
         tickstart = HAL_GetTick();
@@ -87,7 +88,7 @@ void Controller::loop() {
     } else {
         if (HAL_GetTick() - this->last_command_send_tick > 500){
             this->onRxError(0);
-            this->comm_uart->State = HAL_UART_STATE_READY;
+            this->comm_uart->gState = HAL_UART_STATE_READY;
         }
     }
 
@@ -227,7 +228,7 @@ bool Controller::checkCommandsQueue() {
 }
 
 bool Controller::sendCommand(CommandPacket *pPacket) {
-    if (this->comm_uart->State == HAL_UART_STATE_READY && !this->cmd_to_process.header){
+    if (this->comm_uart->gState == HAL_UART_STATE_READY && !this->cmd_to_process.header){
         HAL_StatusTypeDef s;
         HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_SET);
         HAL_Delay(1);
@@ -331,7 +332,11 @@ void Controller::onUSARTTxComplete(UART_HandleTypeDef *huart) {
 
 void Controller::onUSARTError(UART_HandleTypeDef *huart) {
     HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
-    this->onTxError(0);
+    if (huart->ErrorCode == HAL_UART_ERROR_FE && cmd_to_process.header){
+        // ignore standard error
+    } else {
+        this->onTxError(0);
+    }
 }
 
 void Controller::onUSARTRxComplete(UART_HandleTypeDef *huart) {

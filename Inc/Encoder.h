@@ -22,7 +22,7 @@ private:
     bool reverse;
     int32_t position;
     uint16_t last_pulse_count;
-    int8_t position_delta;
+    int16_t position_delta;
 public:
     void init();
     int32_t getPosition();

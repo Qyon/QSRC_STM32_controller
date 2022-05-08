@@ -6,6 +6,9 @@
 #define QSRC_STM32_PROTOCOL_H
 
 #pragma pack(1)
+
+#include <stdint-gcc.h>
+
 static const uint32_t packetHeader = 0x51535243;
 
 enum ProtocolCommand {
@@ -25,6 +28,9 @@ enum ProtocolCommand {
     cmdReadEncoders = 0x0e,
     cmdReadEncodersResponse = 0x0f,
     cmdSetAzEl = 0x10,
+    cmdReadMaxSpeed = 0x11,
+    cmdReadMaxSpeedResponse = 0x12,
+    cmdSetMaxSpeed = 0x13,
 
     cmdOkResponse = 0xfd,
     cmdErrorResponse = 0xfe,
@@ -105,6 +111,17 @@ struct CommandReadEncodersResponse {
     uint16_t el;
 };
 
+struct CommandPayloadReadMaxSpeed {
+    float az;
+    float el;
+};
+
+struct CommandPayloadSetMaxSpeed {
+    float az;
+    float el;
+};
+
+
 union CommandPayload {
     CommandPayloadPing ping;
     CommandPayloadPong pong;
@@ -124,6 +141,8 @@ union CommandPayload {
     CommandReadEncoders readEncoders;
     CommandReadEncodersResponse readEncodersResponse;
     CommandPayloadSetAzEl setAzEl;
+    CommandPayloadReadMaxSpeed readMaxSpeed;
+    CommandPayloadSetMaxSpeed setMaxSpeed;
 };
 
 /**
