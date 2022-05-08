@@ -5,22 +5,12 @@
 
 #include <cstring>
 #include "Display.h"
-void lcd_error(LCD_RESULT x){
 
-}
 void Display::init() {
-    lcd->errorCallback = lcd_error;
-    lcd->pcf8574.PCF_I2C_ADDRESS = 7;
-    lcd->pcf8574.PCF_I2C_TIMEOUT = 1000;
-    lcd->pcf8574.i2c.Instance = I2C1;
-    lcd->pcf8574.i2c.Init.ClockSpeed = 400000;
-    lcd->NUMBER_OF_LINES = NUMBER_OF_LINES_2;
-    lcd->type = TYPE0;
+    LCD_Init(i2c);
 
-    LCD_Init(lcd);
-
-    LCD_ClearDisplay(lcd);
-
+    LCD_Cls();
+    LCD_Cls();
 
     print(0, 0, (char *)  "QSRC ");
     print(1, 0, (char *) __DATE__);
@@ -28,11 +18,11 @@ void Display::init() {
     print(3, 0, (char *) "SQ5RWU");
 
     HAL_Delay(1000);
-    LCD_ClearDisplay(lcd);
+    LCD_Cls();
 }
 
 
-Display::Display(LCD_PCF8574_HandleTypeDef *lcd) : lcd(lcd) {
+Display::Display(I2C_HandleTypeDef *i2c) : i2c(i2c) {
 
 }
 /**
@@ -42,7 +32,7 @@ Display::Display(LCD_PCF8574_HandleTypeDef *lcd) : lcd(lcd) {
  */
 void Display::print(uint8_t row, uint8_t col, char *data) {
     setRC(row, col);
-    LCD_WriteString(lcd, data);
+    LCD_String(data);
 }
 
 void Display::setRC(uint8_t row, uint8_t col) const {
@@ -50,17 +40,21 @@ void Display::setRC(uint8_t row, uint8_t col) const {
         col += 20;
         row -= 2;
     }
-    LCD_SetLocation(lcd, col, row);
+    LCD_Locate(col, row);
 }
 
 void Display::print(uint8_t row, uint8_t col, float value, uint8_t digits) {
     setRC(row, col);
-    LCD_WriteFloat(lcd, value, digits);
+    char fs[LCD_X+1];
+    sprintf(fs, "%%0.%df", digits);
+    char buf[LCD_X+1];
+    sprintf(buf, fs, value);
+    LCD_String(buf);
 }
 
-void Display::print(uint8_t row, uint8_t col, uint32_t value, uint8_t base) {
+void Display::print(uint8_t row, uint8_t col, int32_t value) {
     setRC(row, col);
-    LCD_WriteNumber(lcd, value, base);
+    LCD_Int(value);
 }
 
 void Display::refresh() {
@@ -135,7 +129,7 @@ void Display::setElTarget(float el_desired) {
 }
 
 void Display::clear() {
-    LCD_ClearDisplay(lcd);
+    LCD_Cls();
 }
 
 void Display::setComm_tx_err(uint16_t comm_tx_err) {

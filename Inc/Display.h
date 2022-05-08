@@ -4,17 +4,18 @@
 
 #ifndef QSRC_STM32_CONTROLLER_DISPLAY_H
 #define QSRC_STM32_CONTROLLER_DISPLAY_H
+
 #ifdef __cplusplus
 extern "C" {
 #endif
-#include <hd44780.h>
+#include "LCD_HD44780_I2C.h"
 #ifdef __cplusplus
 }
 #endif
 
 class Display {
 private:
-    LCD_PCF8574_HandleTypeDef *lcd;
+    I2C_HandleTypeDef *i2c;
 
     float az_current = 0.0f;
 public:
@@ -51,12 +52,12 @@ private:
     uint8_t comm_tx_err_refresh = 1;
     uint8_t comm_rx_err_refresh = 1;
 public:
-    Display(LCD_PCF8574_HandleTypeDef *lcd);
+    Display(I2C_HandleTypeDef *i2c);
 
     void init();
     void refresh();
     void print(uint8_t row, uint8_t col, char *data);
-    void print(uint8_t row, uint8_t col, uint32_t value, uint8_t base = 10);
+    void print(uint8_t row, uint8_t col, int32_t value);
     void print(uint8_t row, uint8_t col, float value, uint8_t digits);
     void setRC(uint8_t row, uint8_t col) const;
 

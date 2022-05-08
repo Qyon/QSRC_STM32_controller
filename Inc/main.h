@@ -100,10 +100,6 @@ void Error_Handler(void);
 #define EN_1_B_GPIO_Port GPIOA
 #define EN_1_BTN_Pin GPIO_PIN_10
 #define EN_1_BTN_GPIO_Port GPIOA
-#define IR_SENS_Pin GPIO_PIN_13
-#define IR_SENS_GPIO_Port GPIOA
-#define LED_D_Pin GPIO_PIN_14
-#define LED_D_GPIO_Port GPIOA
 #define LED_C_Pin GPIO_PIN_15
 #define LED_C_GPIO_Port GPIOA
 #define LED_B_Pin GPIO_PIN_3
