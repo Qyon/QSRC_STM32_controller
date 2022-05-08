@@ -1,64 +1,76 @@
-cmake_minimum_required(VERSION 3.6)
-include(CMakeForceCompiler)
-SET(CMAKE_SYSTEM_NAME "Generic")
-SET(CMAKE_SYSTEM_VERSION 1)
+#THIS FILE IS AUTO GENERATED FROM THE TEMPLATE! DO NOT CHANGE!
+set(CMAKE_SYSTEM_NAME Generic)
+set(CMAKE_SYSTEM_VERSION 1)
+cmake_minimum_required(VERSION 3.20)
 
-set(TOOLCHAIN_DIR D:/Programy/gcc-arm-none-eabi-6-2017-q1-update-win32/bin/)
+# specify cross compilers and tools
+set(TOOLCHAIN_DIR "D:/Programy/gcc-arm-none-eabi-9-2019-q4-major-win32/bin/")
+LIST(APPEND CMAKE_PROGRAM_PATH ${TOOLCHAIN_DIR})
 
-CMAKE_FORCE_C_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-gcc.exe GNU)
-CMAKE_FORCE_CXX_COMPILER(${TOOLCHAIN_DIR}/arm-none-eabi-g++.exe GNU)
+set(CMAKE_C_COMPILER arm-none-eabi-gcc)
+set(CMAKE_CXX_COMPILER arm-none-eabi-g++)
+set(CMAKE_ASM_COMPILER  arm-none-eabi-gcc)
+set(CMAKE_AR ${TOOLCHAIN_DIR}arm-none-eabi-ar)
+set(CMAKE_OBJCOPY ${TOOLCHAIN_DIR}arm-none-eabi-objcopy)
+set(CMAKE_OBJDUMP ${TOOLCHAIN_DIR}arm-none-eabi-objdump)
+set(SIZE ${TOOLCHAIN_DIR}arm-none-eabi-size)
 
-project(QSRC_STM32_controller C ASM CXX)
+set(CMAKE_TRY_COMPILE_TARGET_TYPE STATIC_LIBRARY)
 
+# project settings
+project(QSRC_STM32_controller C CXX ASM)
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_C_STANDARD 11)
 
-add_definitions(-DSTM32F103C8)
-add_definitions(-DSTM32F10X_MD)
-add_definitions(-DSTM32F103xB)
-add_definitions(-DSUPPORT_CPLUSPLUS)
-add_definitions(-D__ASSEMBLY__)
-add_definitions(-DARM_MATH_CM3)
+#Uncomment for hardware floating point
+#add_compile_definitions(ARM_MATH_CM4;ARM_MATH_MATRIX_CHECK;ARM_MATH_ROUNDING)
+#add_compile_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
+#add_link_options(-mfloat-abi=hard -mfpu=fpv4-sp-d16)
 
+#Uncomment for software floating point
+add_compile_options(-mfloat-abi=soft)
 
+add_compile_options(-mcpu=cortex-m3 -mthumb -mthumb-interwork)
+add_compile_options(-ffunction-sections -fdata-sections -fno-common -fmessage-length=0)
+add_compile_options(-fmessage-length=0 -specs=nosys.specs -specs=nano.specs -fno-exceptions)
+add_link_options(-fno-exceptions -Wl,--gc-sections  --specs=nano.specs)
 
-SET(LINKER_SCRIPT ${PROJECT_SOURCE_DIR}/STM32F103C8T6.ld)
-SET(COMMON_FLAGS " -mcpu=cortex-m3 -mthumb -Wall -ffunction-sections -O3 -fdata-sections -fno-common -Wdouble-promotion ")
-SET(CMAKE_CXX_FLAGS "${COMMON_FLAGS} -std=c++11 -fno-exceptions")
-SET(CMAKE_C_FLAGS "${COMMON_FLAGS} -std=gnu99")
-#SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map -Wl,--print-gc-sections --specs=nano.specs -T ${LINKER_SCRIPT}")
-SET(CMAKE_EXE_LINKER_FLAGS "-Wl,-Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map -Wl,--gc-sections  --specs=nano.specs -T ${LINKER_SCRIPT}")
+# uncomment to mitigate c++17 absolute addresses warnings
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wno-register")
 
-file(GLOB_RECURSE USER_SOURCES "*.c")
-file(GLOB_RECURSE USER_SOURCES_CXX "*.cpp")
-file(GLOB_RECURSE USER_HEADERS "*.h")
-#file(GLOB_RECURSE HAL_SOURCES "stm_lib/src/*.c")
+if ("${CMAKE_BUILD_TYPE}" STREQUAL "Release")
+    message(STATUS "Maximum optimization for speed")
+    add_compile_options(-Ofast)
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "RelWithDebInfo")
+    message(STATUS "Maximum optimization for speed, debug info included")
+    add_compile_options(-Ofast -g)
+elseif ("${CMAKE_BUILD_TYPE}" STREQUAL "MinSizeRel")
+    message(STATUS "Maximum optimization for size")
+    add_compile_options(-Os)
+else ()
+    message(STATUS "Minimal optimization, debug info included")
+    add_compile_options(-Og -g)
+endif ()
 
-include_directories(
-        Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc
-        Middlewares/ST/STM32_USB_Device_Library/Core/Inc
-        Drivers/CMSIS/Device/ST/STM32F1xx/Include
-        Drivers/CMSIS/Include
-        Drivers/STM32F1xx_HAL_Driver/Inc/Legacy
-        Drivers/STM32F1xx_HAL_Driver/Inc
-        Inc
-        .)
-add_executable(${PROJECT_NAME}.elf ${USER_SOURCES} ${USER_SOURCES_CXX} ${USER_HEADERS} ${HAL_SOURCES} Drivers/CMSIS/Device/ST/STM32F1xx/Source/Templates/gcc/startup_stm32f103xb.s ${LINKER_SCRIPT})
+include_directories(Inc Drivers/CMSIS/Device/ST/STM32F1xx/Include Drivers/CMSIS/Include Middlewares/ST/STM32_USB_Device_Library/Class/CDC/Inc Drivers/STM32F1xx_HAL_Driver/Inc/Legacy Drivers/STM32F1xx_HAL_Driver/Inc Middlewares/ST/STM32_USB_Device_Library/Core/Inc)
 
-set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -Wl,-Map=${CMAKE_BINARY_DIR}/${PROJECT_NAME}.map")
-set(HEX_FILE ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.hex)
-set(BIN_FILE ${CMAKE_BINARY_DIR}/${PROJECT_NAME}.bin)
+add_definitions(-DUSE_HAL_DRIVER -DSTM32F103xB -DDEBUG)
+
+file(GLOB_RECURSE SOURCES "Startup/*.*" "Src/*.*" "Middlewares/*.*" "Drivers/*.*")
+
+set(LINKER_SCRIPT ${CMAKE_SOURCE_DIR}/STM32F103C8TX_FLASH.ld)
+
+add_link_options(-Wl,-gc-sections,--print-memory-usage,-Map=${PROJECT_BINARY_DIR}/${PROJECT_NAME}.map)
+add_link_options(-mcpu=cortex-m3 -mthumb -mthumb-interwork)
+add_link_options(-T ${LINKER_SCRIPT})
+
+add_executable(${PROJECT_NAME}.elf ${SOURCES} ${LINKER_SCRIPT})
+
+set(HEX_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.hex)
+set(BIN_FILE ${PROJECT_BINARY_DIR}/${PROJECT_NAME}.bin)
+
 add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
         COMMAND ${CMAKE_OBJCOPY} -Oihex $<TARGET_FILE:${PROJECT_NAME}.elf> ${HEX_FILE}
         COMMAND ${CMAKE_OBJCOPY} -Obinary $<TARGET_FILE:${PROJECT_NAME}.elf> ${BIN_FILE}
-        COMMENT "Building ${HEX_FILE} \nBuilding ${BIN_FILE}")
-
-add_custom_command(TARGET ${PROJECT_NAME}.elf POST_BUILD
-        COMMAND rm -f G:/FIRMWARE.bin
-        COMMAND cp ${BIN_FILE} G:/
-        COMMENT "Burning ${BIN_FILE}")
-
-set(CMAKE_CXX_STANDARD 11)
-
-#add_custom_target(program
-#        DEPENDS ${PROJECT_NAME}.elf
-#        COMMAND D:/Programy/stlink-1.3.0-win64/bin/st-flash  --reset write ${BIN_FILE} 0x08000000
-#        COMMENT "flashing ${BIN_FILE}")
+        COMMENT "Building ${HEX_FILE}
+Building ${BIN_FILE}")
