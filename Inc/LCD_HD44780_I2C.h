@@ -22,7 +22,7 @@
  *
  */
 #define LCD_Y 4
-#define LCD_X 16
+#define LCD_X 20
 #define LCD_I2C_ADDRESS 0x4E
 
 /*
