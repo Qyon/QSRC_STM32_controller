@@ -75,16 +75,12 @@ void MX_USB_DEVICE_Init(void)
 
 
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-    HAL_Delay(5); // Actually unnecessary (from my testing) and can be removed without consequence.
-    GPIO_InitStruct.Pin = GPIO_PIN_12;
+    HAL_Delay(5);
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
-    GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_HIGH;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
-
     HAL_GPIO_WritePin(GPIOA, GPIO_PIN_12, GPIO_PIN_RESET);
-    HAL_Delay(5); // Actually unnecessary (from my testing) and can be removed without consequence.
+    HAL_Delay(5);
 
   /* USER CODE END USB_DEVICE_Init_PreTreatment */
   
