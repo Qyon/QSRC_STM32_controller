@@ -60,6 +60,7 @@ private:
     void setEl_current(float el_current);
     void setEl_desired(float el_desired);
     uint32_t last_command_send_tick;
+    uint32_t last_response_received_tick;
 public:
     Controller(Display *display, UART_HandleTypeDef *comm_uart, Encoder *encoder_s, Encoder *encoder_az,
                    Encoder *encoder_el);

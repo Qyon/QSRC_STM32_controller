@@ -44,7 +44,7 @@ void Controller::send_respose_status() {
 }
 
 void Controller::getRot2ProgAngle(float angle, uint8_t * angle_response) {
-    uint16_t tmp = (uint16_t) ((angle + 360.0f) * 10);
+    uint16_t tmp = (uint16_t) (round((angle) * 10) + 3600.0f);
     tmp = (uint16_t) (tmp % 10000);
     angle_response[0] = (uint8_t) (tmp / 1000);
     tmp = (uint16_t) (tmp % 1000);
@@ -65,8 +65,8 @@ void Controller::init() {
 
 void Controller::loop() {
     static uint32_t tickstart = HAL_GetTick();
-    if (HAL_GetTick() - tickstart > 300){
-        CommandPacket commandPacket;
+    if (HAL_GetTick() - tickstart > 200){
+        CommandPacket commandPacket{};
         commandPacket.command = cmdReadAzEl;
         this->queueCommand(&commandPacket);
         //TODO: dlaczego to nie działa poprawnie?! Dlaczego dostaję 2 odpowiedzi z cmdReadEncodersResponse?
@@ -81,6 +81,7 @@ void Controller::loop() {
         }
         this->cmd_to_process.header = 0;
         response_received = true;
+        last_response_received_tick = HAL_GetTick();
     }
 
     if (checkCommandsQueue() || response_received){
@@ -91,6 +92,13 @@ void Controller::loop() {
             this->comm_uart->gState = HAL_UART_STATE_READY;
         }
     }
+    if (HAL_GetTick() - this->last_response_received_tick > 1000){
+        last_response_received_tick = HAL_GetTick();
+        this->onRxError(100);
+    } else {
+        this->onRxError(1);
+    }
+
 
     encoder_az->getPosition();
     int8_t delta = (int8_t) encoder_az->getDelta();
@@ -209,7 +217,6 @@ void Controller::loop() {
         }
     }
 
-
     display->refresh();
 }
 
@@ -265,6 +272,7 @@ void Controller::sendAzEl(float az, float el) {
     commandPacket.payload.goToAzEl.az = az;
     commandPacket.payload.goToAzEl.el = el;
 
+    queueCommand(&commandPacket);
     if (queueCommand(&commandPacket)){
         setAz_desired(commandPacket.payload.goToAzEl.az);
         setEl_desired(commandPacket.payload.goToAzEl.el);
@@ -334,9 +342,10 @@ void Controller::onUSARTTxComplete(UART_HandleTypeDef *huart) {
 
 void Controller::onUSARTError(UART_HandleTypeDef *huart) {
     HAL_GPIO_WritePin(green_led_GPIO_Port, green_led_Pin, GPIO_PIN_RESET);
-    if (huart->ErrorCode == HAL_UART_ERROR_FE && cmd_to_process.header){
-        // ignore standard error
-    } else {
+    if (huart->ErrorCode) {
+        if (huart->ErrorCode & HAL_UART_ERROR_ORE) {
+            __HAL_UART_CLEAR_OREFLAG(huart);
+        }
         this->onTxError(0);
     }
 }
@@ -392,6 +401,8 @@ bool Controller::handleCommand(CommandPacket *pPacket, CommandPacket *pResponse)
             raw_enc_az = pPacket->payload.readEncodersResponse.az;
             raw_enc_el = pPacket->payload.readEncodersResponse.el;
             break;
+        case cmdGoToAzElResponse:
+        case cmdSetAzElResponse:
         case cmdOkResponse:
             break;
         default:
